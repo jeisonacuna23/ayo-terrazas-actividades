@@ -11,6 +11,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -20,32 +21,41 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
-// Estructura para guardar los datos de la actividad
+// Agregamos el campo 'nota'
 data class Actividad(
     val nombre: String,
     val director: String,
     val predicador: String,
     val ujier: String,
-    val sonidista: String
+    val sonidista: String,
+    val nota: String
 )
 
-// Estructura de cada cuadro del calendario
 data class DiaCalendario(
     val numero: String?,
     val diaSemana: Int,
-    val fechaStr: String? // Formato: "yyyy-MM-dd" para guardarlo en la base de datos
+    val fechaStr: String?
+)
+
+// Estructura para la lista de resumen
+data class ResumenItem(
+    val diaTexto: String,
+    val actividad: Actividad
 )
 
 class MainActivity : AppCompatActivity() {
     private lateinit var prefs: SharedPreferences
     private val actividadesGuardadas = mutableMapOf<String, Actividad>()
 
+    private lateinit var adapterCalendario: CalendarioAdapter
+    private lateinit var adapterResumen: ResumenAdapter
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         prefs = getSharedPreferences("AyO_Prefs", Context.MODE_PRIVATE)
-        cargarDesdePrefs() // Cargar lo que ya estaba guardado
+        cargarDesdePrefs()
 
         val tvMes = findViewById<TextView>(R.id.tvMes)
         val calendario = Calendar.getInstance()
@@ -54,21 +64,35 @@ class MainActivity : AppCompatActivity() {
         val mesEnCurso = formatoMes.format(calendario.time)
         tvMes.text = mesEnCurso.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
 
-        val recyclerView = findViewById<RecyclerView>(R.id.recyclerViewCalendario)
-        recyclerView.layoutManager = GridLayoutManager(this, 7)
-
+        // Configurar Calendario
+        val recyclerViewCalendario = findViewById<RecyclerView>(R.id.recyclerViewCalendario)
+        recyclerViewCalendario.layoutManager = GridLayoutManager(this, 7)
         val daysList = generarDiasMesActual(calendario)
-        
-        val adapter = CalendarioAdapter(daysList, actividadesGuardadas) { fecha, actividad ->
-            // Función que se ejecuta cuando se guarda en el modal
+
+        // Configurar Resumen
+        val recyclerViewResumen = findViewById<RecyclerView>(R.id.recyclerViewResumen)
+        recyclerViewResumen.layoutManager = LinearLayoutManager(this)
+        adapterResumen = ResumenAdapter()
+        recyclerViewResumen.adapter = adapterResumen
+
+        // Callback cuando se guarda un día
+        adapterCalendario = CalendarioAdapter(daysList, actividadesGuardadas) { fecha, actividad ->
             actividadesGuardadas[fecha] = actividad
             guardarEnPrefs()
+            
+            // Actualizar el cuadro del calendario
             val pos = daysList.indexOfFirst { it.fechaStr == fecha }
             if (pos != -1) {
-                recyclerView.adapter?.notifyItemChanged(pos)
+                adapterCalendario.notifyItemChanged(pos)
             }
+            
+            // Actualizar la lista de resumen
+            actualizarResumen()
         }
-        recyclerView.adapter = adapter
+        recyclerViewCalendario.adapter = adapterCalendario
+
+        // Cargar resumen inicial
+        actualizarResumen()
     }
 
     private fun generarDiasMesActual(cal: Calendar): MutableList<DiaCalendario> {
@@ -93,7 +117,17 @@ class MainActivity : AppCompatActivity() {
         return lista
     }
 
-    // --- MÉTODOS PARA GUARDAR Y LEER EN EL TELÉFONO ---
+    private fun actualizarResumen() {
+        // Ordenar por fecha y dar formato de texto (Ej: Mar 15)
+        val listaResumen = actividadesGuardadas.entries
+            .sortedBy { it.key }
+            .map { (fecha, act) ->
+                val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(fecha)
+                val diaTexto = SimpleDateFormat("EEE d", Locale("es", "ES")).format(date!!)
+                ResumenItem(diaTexto.replaceFirstChar { it.uppercase() }, act)
+            }
+        adapterResumen.actualizarDatos(listaResumen)
+    }
 
     private fun guardarEnPrefs() {
         val jsonObject = JSONObject()
@@ -104,6 +138,7 @@ class MainActivity : AppCompatActivity() {
             obj.put("predicador", act.predicador)
             obj.put("ujier", act.ujier)
             obj.put("sonidista", act.sonidista)
+            obj.put("nota", act.nota)
             jsonObject.put(fecha, obj)
         }
         prefs.edit().putString("actividades", jsonObject.toString()).apply()
@@ -122,7 +157,8 @@ class MainActivity : AppCompatActivity() {
                     obj.optString("director", ""),
                     obj.optString("predicador", ""),
                     obj.optString("ujier", ""),
-                    obj.optString("sonidista", "")
+                    obj.optString("sonidista", ""),
+                    obj.optString("nota", "")
                 )
             }
         } catch (e: Exception) {
@@ -154,15 +190,12 @@ class CalendarioAdapter(
             holder.tvDia.text = dia.numero
             holder.itemView.visibility = View.VISIBLE
 
-            // Verificamos si este día ya tiene datos guardados
             val tieneGuardado = dia.fechaStr != null && actividades.containsKey(dia.fechaStr)
 
             if (tieneGuardado) {
-                // Verde Oscuro si ya tiene actividad
                 holder.cardView.setCardBackgroundColor(ContextCompat.getColor(holder.itemView.context, R.color.verde_oscuro))
                 holder.tvDia.setTextColor(ContextCompat.getColor(holder.itemView.context, R.color.blanco_fondo))
             } else {
-                // Verde Claro si está vacío
                 holder.cardView.setCardBackgroundColor(ContextCompat.getColor(holder.itemView.context, R.color.verde_claro))
                 holder.tvDia.setTextColor(ContextCompat.getColor(holder.itemView.context, R.color.negro_contraste))
             }
@@ -190,6 +223,7 @@ class CalendarioAdapter(
         val etPredicador = view.findViewById<TextInputEditText>(R.id.etPredicador)
         val etUjier = view.findViewById<TextInputEditText>(R.id.etUjier)
         val etSonidista = view.findViewById<TextInputEditText>(R.id.etSonidista)
+        val etNota = view.findViewById<TextInputEditText>(R.id.etNota)
 
         val esJueves = dia.diaSemana == Calendar.THURSDAY
         if (esJueves) {
@@ -198,15 +232,25 @@ class CalendarioAdapter(
             layoutPredicador.visibility = View.VISIBLE
         }
 
-        // Si el día ya tiene datos, los colocamos en los campos para editar
         val fecha = dia.fechaStr ?: return
         val datosGuardados = actividades[fecha]
+        
         if (datosGuardados != null) {
             etNombreActividad.setText(datosGuardados.nombre)
             etDirector.setText(datosGuardados.director)
             etPredicador.setText(datosGuardados.predicador)
             etUjier.setText(datosGuardados.ujier)
             etSonidista.setText(datosGuardados.sonidista)
+            etNota.setText(datosGuardados.nota)
+        } else {
+            // Nombres por defecto si el día está vacío
+            val nombreDefecto = when (dia.diaSemana) {
+                Calendar.TUESDAY -> "Culto de Enseñanza"
+                Calendar.THURSDAY -> "Culto de Oración"
+                Calendar.SUNDAY -> "Escuela Dominical"
+                else -> ""
+            }
+            etNombreActividad.setText(nombreDefecto)
         }
 
         builder.setView(view)
@@ -218,9 +262,9 @@ class CalendarioAdapter(
                         etDirector.text.toString().trim(),
                         etPredicador.text.toString().trim(),
                         etUjier.text.toString().trim(),
-                        etSonidista.text.toString().trim()
+                        etSonidista.text.toString().trim(),
+                        etNota.text.toString().trim()
                     )
-                    // Llamamos a la función que guarda en el teléfono
                     onGuardar(fecha, nuevaActividad)
                     Toast.makeText(context, "Cronograma guardado", Toast.LENGTH_SHORT).show()
                 } else {
@@ -232,4 +276,55 @@ class CalendarioAdapter(
     }
 
     override fun getItemCount(): Int = dias.size
+}
+
+// Adaptador para la lista de resumen de abajo
+class ResumenAdapter : RecyclerView.Adapter<ResumenAdapter.ResumenViewHolder>() {
+    private var lista: List<ResumenItem> = emptyList()
+
+    class ResumenViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val tvDia: TextView = itemView.findViewById(R.id.tvDiaResumen)
+        val tvActividad: TextView = itemView.findViewById(R.id.tvActividadResumen)
+        val tvDirector: TextView = itemView.findViewById(R.id.tvDirectorResumen)
+        val tvPredicador: TextView = itemView.findViewById(R.id.tvPredicadorResumen)
+        val tvUjier: TextView = itemView.findViewById(R.id.tvUjierResumen)
+        val tvSonidista: TextView = itemView.findViewById(R.id.tvSonidistaResumen)
+        val tvNota: TextView = itemView.findViewById(R.id.tvNotaResumen)
+    }
+
+    fun actualizarDatos(nuevaLista: List<ResumenItem>) {
+        lista = nuevaLista
+        notifyDataSetChanged()
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ResumenViewHolder {
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_resumen, parent, false)
+        return ResumenViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: ResumenViewHolder, position: Int) {
+        val item = lista[position]
+        val act = item.actividad
+
+        holder.tvDia.text = item.diaTexto
+        holder.tvActividad.text = act.nombre
+
+        // Ocultar los campos que estén vacíos para que no se vea feo
+        holder.tvDirector.visibility = if (act.director.isBlank()) View.GONE else View.VISIBLE
+        holder.tvDirector.text = "Director: ${act.director}"
+
+        holder.tvPredicador.visibility = if (act.predicador.isBlank()) View.GONE else View.VISIBLE
+        holder.tvPredicador.text = "Predicador: ${act.predicador}"
+
+        holder.tvUjier.visibility = if (act.ujier.isBlank()) View.GONE else View.VISIBLE
+        holder.tvUjier.text = "Ujier: ${act.ujier}"
+
+        holder.tvSonidista.visibility = if (act.sonidista.isBlank()) View.GONE else View.VISIBLE
+        holder.tvSonidista.text = "Sonidista: ${act.sonidista}"
+
+        holder.tvNota.visibility = if (act.nota.isBlank()) View.GONE else View.VISIBLE
+        holder.tvNota.text = "Nota: ${act.nota}"
+    }
+
+    override fun getItemCount(): Int = lista.size
 }
