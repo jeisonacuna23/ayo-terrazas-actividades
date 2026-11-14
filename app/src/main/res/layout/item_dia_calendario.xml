@@ -2,20 +2,20 @@
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="48dp"
-    android:layout_margin="2dp"
-    app:cardBackgroundColor="@color/negro_fondo"
-    app:cardCornerRadius="6dp"
-    app:strokeColor="@color/verde_alfa"
-    app:strokeWidth="1dp">
+    android:layout_height="54dp"
+    android:layout_margin="4dp"
+    app:cardBackgroundColor="@color/verde_claro"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="4dp"
+    app:strokeWidth="0dp">
 
     <TextView
         android:id="@+id/tvDia"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:gravity="center"
-        android:textColor="@color/blanco_texto"
-        android:textSize="16sp"
+        android:textColor="@color/negro_contraste"
+        android:textSize="18sp"
         android:textStyle="bold" />
 
 </com.google.android.material.card.MaterialCardView>

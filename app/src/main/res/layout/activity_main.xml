@@ -3,17 +3,18 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/negro_fondo"
+    android:background="@color/blanco_fondo"
     android:padding="16dp">
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Actividades Alfa y Omega Terrazas"
-        android:textColor="@color/blanco_texto"
+        android:textColor="@color/negro_contraste"
         android:textSize="20sp"
         android:textStyle="bold"
         android:gravity="center"
+        android:layout_marginTop="16dp"
         android:layout_marginBottom="24dp"/>
 
     <TextView
@@ -21,7 +22,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Mes"
-        android:textColor="@color/verde_alfa"
+        android:textColor="@color/verde_oscuro"
         android:textSize="24sp"
         android:textStyle="bold"
         android:gravity="center"
@@ -32,13 +33,13 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:layout_marginBottom="8dp">
-        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="L" android:textColor="@color/verde_alfa" android:gravity="center"/>
-        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="M" android:textColor="@color/verde_alfa" android:gravity="center"/>
-        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="M" android:textColor="@color/verde_alfa" android:gravity="center"/>
-        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="J" android:textColor="@color/verde_alfa" android:gravity="center"/>
-        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="V" android:textColor="@color/verde_alfa" android:gravity="center"/>
-        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="S" android:textColor="@color/verde_alfa" android:gravity="center"/>
-        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="D" android:textColor="@color/verde_alfa" android:gravity="center"/>
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Lun" android:textColor="@color/negro_contraste" android:textStyle="bold" android:gravity="center"/>
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Mar" android:textColor="@color/negro_contraste" android:textStyle="bold" android:gravity="center"/>
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Mié" android:textColor="@color/negro_contraste" android:textStyle="bold" android:gravity="center"/>
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Jue" android:textColor="@color/negro_contraste" android:textStyle="bold" android:gravity="center"/>
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Vie" android:textColor="@color/negro_contraste" android:textStyle="bold" android:gravity="center"/>
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Sáb" android:textColor="@color/negro_contraste" android:textStyle="bold" android:gravity="center"/>
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Dom" android:textColor="@color/negro_contraste" android:textStyle="bold" android:gravity="center"/>
     </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView

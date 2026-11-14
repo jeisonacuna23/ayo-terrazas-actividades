@@ -8,9 +8,12 @@ import android.view.ViewGroup
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.TextInputEditText
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -34,7 +37,7 @@ class MainActivity : AppCompatActivity() {
         recyclerView.adapter = CalendarioAdapter(daysList)
     }
 
-    private fun generarDiasMesActual(cal: Calendar): List<DiaCalendario> {
+    private fun generarDiasMesActual(cal: Calendar): MutableList<DiaCalendario> {
         val calendarioLocal = cal.clone() as Calendar
         calendarioLocal.set(Calendar.DAY_OF_MONTH, 1)
 
@@ -48,7 +51,6 @@ class MainActivity : AppCompatActivity() {
             lista.add(DiaCalendario(null, 0))
         }
         for (i in 1..totalDias) {
-            // Guardamos el número del día y a qué día de la semana corresponde
             lista.add(DiaCalendario(i.toString(), calendarioLocal.get(Calendar.DAY_OF_WEEK)))
             calendarioLocal.add(Calendar.DAY_OF_MONTH, 1)
         }
@@ -56,12 +58,17 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-// Clase para guardar los datos de cada celda
-data class DiaCalendario(val numero: String?, val diaSemana: Int)
+// Actualizamos la clase para saber si el día ya tiene un cronograma guardado
+data class DiaCalendario(
+    val numero: String?, 
+    val diaSemana: Int, 
+    var tieneCronograma: Boolean = false
+)
 
-class CalendarioAdapter(private val dias: List<DiaCalendario>) : RecyclerView.Adapter<CalendarioAdapter.DiaViewHolder>() {
+class CalendarioAdapter(private val dias: MutableList<DiaCalendario>) : RecyclerView.Adapter<CalendarioAdapter.DiaViewHolder>() {
     class DiaViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val tvDia: TextView = itemView.findViewById(R.id.tvDia)
+        val cardView: MaterialCardView = itemView as MaterialCardView
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): DiaViewHolder {
@@ -71,21 +78,30 @@ class CalendarioAdapter(private val dias: List<DiaCalendario>) : RecyclerView.Ad
 
     override fun onBindViewHolder(holder: DiaViewHolder, position: Int) {
         val dia = dias[position]
+        
         if (dia.numero != null) {
             holder.tvDia.text = dia.numero
             holder.itemView.visibility = View.VISIBLE
 
-            // Aquí atrapamos el clic en el día
+            // Comprobar si el día ya tiene un cronograma para pintarlo de verde oscuro
+            if (dia.tieneCronograma) {
+                holder.cardView.setCardBackgroundColor(ContextCompat.getColor(holder.itemView.context, R.color.verde_oscuro))
+                holder.tvDia.setTextColor(ContextCompat.getColor(holder.itemView.context, R.color.blanco_fondo))
+            } else {
+                holder.cardView.setCardBackgroundColor(ContextCompat.getColor(holder.itemView.context, R.color.verde_claro))
+                holder.tvDia.setTextColor(ContextCompat.getColor(holder.itemView.context, R.color.negro_contraste))
+            }
+
             holder.itemView.setOnClickListener {
                 when (dia.diaSemana) {
                     Calendar.TUESDAY, Calendar.SUNDAY -> {
-                        mostrarModalActividad(holder.itemView.context, dia.diaSemana, esJueves = false)
+                        mostrarModalActividad(holder.itemView.context, position, esJueves = false)
                     }
                     Calendar.THURSDAY -> {
-                        mostrarModalActividad(holder.itemView.context, dia.diaSemana, esJueves = true)
+                        mostrarModalActividad(holder.itemView.context, position, esJueves = true)
                     }
                     else -> {
-                        Toast.makeText(holder.itemView.context, "Este día aún no tiene actividades", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(holder.itemView.context, "Este día aún no tiene actividades configuradas", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -95,13 +111,13 @@ class CalendarioAdapter(private val dias: List<DiaCalendario>) : RecyclerView.Ad
         }
     }
 
-    private fun mostrarModalActividad(context: Context, diaSemana: Int, esJueves: Boolean) {
+    private fun mostrarModalActividad(context: Context, position: Int, esJueves: Boolean) {
         val builder = MaterialAlertDialogBuilder(context)
         val view = LayoutInflater.from(context).inflate(R.layout.dialog_actividad, null)
 
         val layoutPredicador = view.findViewById<View>(R.id.layoutPredicador)
+        val etNombreActividad = view.findViewById<TextInputEditText>(R.id.etNombreActividad)
 
-        // Si es Jueves, ocultamos el campo de Predicador
         if (esJueves) {
             layoutPredicador.visibility = View.GONE
         } else {
@@ -110,8 +126,15 @@ class CalendarioAdapter(private val dias: List<DiaCalendario>) : RecyclerView.Ad
 
         builder.setView(view)
             .setPositiveButton("Guardar") { dialog, _ ->
-                // Aquí irá la lógica para guardar los datos después
-                Toast.makeText(context, "Guardado (próximamente)", Toast.LENGTH_SHORT).show()
+                val nombre = etNombreActividad.text.toString().trim()
+                if (nombre.isNotEmpty()) {
+                    // Marcamos el día como "con cronograma" y actualizamos el cuadro
+                    dias[position].tieneCronograma = true
+                    notifyItemChanged(position)
+                    Toast.makeText(context, "Cronograma establecido", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(context, "Por favor, ingresa el nombre de la actividad", Toast.LENGTH_SHORT).show()
+                }
                 dialog.dismiss()
             }
             .setNegativeButton("Cancelar") { dialog, _ ->

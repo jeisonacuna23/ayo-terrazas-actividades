@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="verde_alfa">#4CAF50</color>
-    <color name="negro_fondo">#121212</color>
-    <color name="blanco_texto">#FFFFFF</color>
+    <color name="blanco_fondo">#FFFFFF</color>
+    <color name="negro_contraste">#000000</color>
+    <color name="verde_claro">#E8F5E9</color> <!-- Para los cuadros normales -->
+    <color name="verde_oscuro">#2E7D32</color> <!-- Para acentos y días con cronograma -->
 </resources>
