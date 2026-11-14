@@ -58,9 +58,32 @@
         android:layout_marginTop="8dp"
         android:layout_marginBottom="8dp"/>
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerViewResumen"
+    <!-- Una sola tarjeta grande para el resumen -->
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="0.8" />
+        android:layout_weight="0.8"
+        android:layout_marginBottom="16dp">
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardBackgroundColor="@color/verde_claro"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp"
+            app:strokeColor="@color/verde_oscuro"
+            app:strokeWidth="1dp"
+            xmlns:app="http://schemas.android.com/apk/res-auto">
+
+            <TextView
+                android:id="@+id/tvResumenCompleto"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp"
+                android:textColor="@color/negro_contraste"
+                android:textSize="15sp"
+                android:textIsSelectable="true" 
+                android:lineSpacingExtra="4dp"/>
+        </com.google.android.material.card.MaterialCardView>
+    </ScrollView>
 </LinearLayout>

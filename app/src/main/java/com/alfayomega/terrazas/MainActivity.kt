@@ -2,7 +2,11 @@ package com.alfayomega.terrazas
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.graphics.Typeface
 import android.os.Bundle
+import android.text.Spannable
+import android.text.SpannableStringBuilder
+import android.text.style.StyleSpan
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -11,7 +15,6 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -21,7 +24,6 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
-// Agregamos el campo 'nota'
 data class Actividad(
     val nombre: String,
     val director: String,
@@ -37,18 +39,11 @@ data class DiaCalendario(
     val fechaStr: String?
 )
 
-// Estructura para la lista de resumen
-data class ResumenItem(
-    val diaTexto: String,
-    val actividad: Actividad
-)
-
 class MainActivity : AppCompatActivity() {
     private lateinit var prefs: SharedPreferences
     private val actividadesGuardadas = mutableMapOf<String, Actividad>()
-
     private lateinit var adapterCalendario: CalendarioAdapter
-    private lateinit var adapterResumen: ResumenAdapter
+    private lateinit var tvResumenCompleto: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,40 +53,29 @@ class MainActivity : AppCompatActivity() {
         cargarDesdePrefs()
 
         val tvMes = findViewById<TextView>(R.id.tvMes)
+        tvResumenCompleto = findViewById(R.id.tvResumenCompleto)
         val calendario = Calendar.getInstance()
 
         val formatoMes = SimpleDateFormat("MMMM yyyy", Locale("es", "ES"))
         val mesEnCurso = formatoMes.format(calendario.time)
         tvMes.text = mesEnCurso.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
 
-        // Configurar Calendario
         val recyclerViewCalendario = findViewById<RecyclerView>(R.id.recyclerViewCalendario)
         recyclerViewCalendario.layoutManager = GridLayoutManager(this, 7)
         val daysList = generarDiasMesActual(calendario)
 
-        // Configurar Resumen
-        val recyclerViewResumen = findViewById<RecyclerView>(R.id.recyclerViewResumen)
-        recyclerViewResumen.layoutManager = LinearLayoutManager(this)
-        adapterResumen = ResumenAdapter()
-        recyclerViewResumen.adapter = adapterResumen
-
-        // Callback cuando se guarda un día
         adapterCalendario = CalendarioAdapter(daysList, actividadesGuardadas) { fecha, actividad ->
             actividadesGuardadas[fecha] = actividad
             guardarEnPrefs()
             
-            // Actualizar el cuadro del calendario
             val pos = daysList.indexOfFirst { it.fechaStr == fecha }
             if (pos != -1) {
                 adapterCalendario.notifyItemChanged(pos)
             }
-            
-            // Actualizar la lista de resumen
             actualizarResumen()
         }
         recyclerViewCalendario.adapter = adapterCalendario
 
-        // Cargar resumen inicial
         actualizarResumen()
     }
 
@@ -118,15 +102,42 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun actualizarResumen() {
-        // Ordenar por fecha y dar formato de texto (Ej: Mar 15)
-        val listaResumen = actividadesGuardadas.entries
-            .sortedBy { it.key }
-            .map { (fecha, act) ->
-                val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(fecha)
-                val diaTexto = SimpleDateFormat("EEE d", Locale("es", "ES")).format(date!!)
-                ResumenItem(diaTexto.replaceFirstChar { it.uppercase() }, act)
-            }
-        adapterResumen.actualizarDatos(listaResumen)
+        val sb = SpannableStringBuilder()
+        // Ordenar las actividades por fecha
+        val listaOrdenada = actividadesGuardadas.entries.sortedBy { it.key }
+
+        for ((fecha, act) in listaOrdenada) {
+            val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(fecha)
+            // Usamos EEEE para el nombre completo del día (ej. "martes 15")
+            val diaTexto = SimpleDateFormat("EEEE d", Locale("es", "ES")).format(date!!)
+            val diaCapitalizado = diaTexto.replaceFirstChar { it.uppercase() }
+
+            // 1. Día y Actividad (En negrita)
+            val encabezado = "$diaCapitalizado\n${act.nombre}\n"
+            val startEncabezado = sb.length
+            sb.append(encabezado)
+            sb.setSpan(StyleSpan(Typeface.BOLD), startEncabezado, sb.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+
+            // 2. Parámetros (Etiquetas en negrita, nombres normales)
+            agregarParametro(sb, "Director: ", act.director)
+            agregarParametro(sb, "Predicador: ", act.predicador)
+            agregarParametro(sb, "Ujier: ", act.ujier)
+            agregarParametro(sb, "Sonidista: ", act.sonidista)
+            agregarParametro(sb, "Nota: ", act.nota)
+
+            sb.append("\n\n") // Espacio entre días
+        }
+
+        tvResumenCompleto.text = sb
+    }
+
+    private fun agregarParametro(sb: SpannableStringBuilder, etiqueta: String, valor: String) {
+        if (valor.isNotBlank()) {
+            val start = sb.length
+            sb.append(etiqueta) // Ej: "Director: "
+            sb.setSpan(StyleSpan(Typeface.BOLD), start, sb.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            sb.append("$valor\n") // El nombre va normal
+        }
     }
 
     private fun guardarEnPrefs() {
@@ -243,7 +254,6 @@ class CalendarioAdapter(
             etSonidista.setText(datosGuardados.sonidista)
             etNota.setText(datosGuardados.nota)
         } else {
-            // Nombres por defecto si el día está vacío
             val nombreDefecto = when (dia.diaSemana) {
                 Calendar.TUESDAY -> "Culto de Enseñanza"
                 Calendar.THURSDAY -> "Culto de Oración"
@@ -276,55 +286,4 @@ class CalendarioAdapter(
     }
 
     override fun getItemCount(): Int = dias.size
-}
-
-// Adaptador para la lista de resumen de abajo
-class ResumenAdapter : RecyclerView.Adapter<ResumenAdapter.ResumenViewHolder>() {
-    private var lista: List<ResumenItem> = emptyList()
-
-    class ResumenViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        val tvDia: TextView = itemView.findViewById(R.id.tvDiaResumen)
-        val tvActividad: TextView = itemView.findViewById(R.id.tvActividadResumen)
-        val tvDirector: TextView = itemView.findViewById(R.id.tvDirectorResumen)
-        val tvPredicador: TextView = itemView.findViewById(R.id.tvPredicadorResumen)
-        val tvUjier: TextView = itemView.findViewById(R.id.tvUjierResumen)
-        val tvSonidista: TextView = itemView.findViewById(R.id.tvSonidistaResumen)
-        val tvNota: TextView = itemView.findViewById(R.id.tvNotaResumen)
-    }
-
-    fun actualizarDatos(nuevaLista: List<ResumenItem>) {
-        lista = nuevaLista
-        notifyDataSetChanged()
-    }
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ResumenViewHolder {
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_resumen, parent, false)
-        return ResumenViewHolder(view)
-    }
-
-    override fun onBindViewHolder(holder: ResumenViewHolder, position: Int) {
-        val item = lista[position]
-        val act = item.actividad
-
-        holder.tvDia.text = item.diaTexto
-        holder.tvActividad.text = act.nombre
-
-        // Ocultar los campos que estén vacíos para que no se vea feo
-        holder.tvDirector.visibility = if (act.director.isBlank()) View.GONE else View.VISIBLE
-        holder.tvDirector.text = "Director: ${act.director}"
-
-        holder.tvPredicador.visibility = if (act.predicador.isBlank()) View.GONE else View.VISIBLE
-        holder.tvPredicador.text = "Predicador: ${act.predicador}"
-
-        holder.tvUjier.visibility = if (act.ujier.isBlank()) View.GONE else View.VISIBLE
-        holder.tvUjier.text = "Ujier: ${act.ujier}"
-
-        holder.tvSonidista.visibility = if (act.sonidista.isBlank()) View.GONE else View.VISIBLE
-        holder.tvSonidista.text = "Sonidista: ${act.sonidista}"
-
-        holder.tvNota.visibility = if (act.nota.isBlank()) View.GONE else View.VISIBLE
-        holder.tvNota.text = "Nota: ${act.nota}"
-    }
-
-    override fun getItemCount(): Int = lista.size
 }
